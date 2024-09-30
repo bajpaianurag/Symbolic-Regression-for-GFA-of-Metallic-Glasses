@@ -1,4 +1,4 @@
-Classifier_check_for_generated_compositions.py contains Python code for building and evaluating classification models for multicomponent alloy compositions. Several classifiers are defined, including Random Forest, Gradient Boosting, SVM, Logistic Regression, K-Nearest Neighbors, Naive Bayes, and a Neural Network model built built to classify multicomponent metallic glasses from crystalline alloys.
+\b{Classifier_check_for_generated_compositions.py} contains Python code for building and evaluating classification models for multicomponent alloy compositions. Several classifiers are defined, including Random Forest, Gradient Boosting, SVM, Logistic Regression, K-Nearest Neighbors, Naive Bayes, and a Neural Network model built built to classify multicomponent metallic glasses from crystalline alloys.
 
 Data_preprocessing_and_feature_selction.py contains Python code for preprocessing data and performing feature selection for regression model
 
