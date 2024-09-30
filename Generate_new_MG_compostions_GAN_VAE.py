@@ -20,7 +20,6 @@ scaler_features = MinMaxScaler()
 features_normalized = scaler_features.fit_transform(features)
 input_data = np.hstack([compositions_normalized, features_normalized])
 
-
 # Define the generator, discriminator, and encoder models
 def build_generator(latent_dim, output_dim, layers, units):
     model = Sequential()
