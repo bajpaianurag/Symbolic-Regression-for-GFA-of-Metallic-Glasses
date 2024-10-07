@@ -15,28 +15,27 @@ R = 8.31
 file_path = 'symbolic_Tx.csv'
 data = pd.read_csv(file_path)
 
+
 # Unit dictionary for dimensional tracking (SI Units)
 units_dict = {
-    'heating_rate': np.array([0, 0, -1, 0, 1]),  # K/s 
-    'formation_enthalpy': np.array([2, 1, -2, -1, 0]),  # kJ/mol -> [m^2 * kg / s^2 / mol]
-    'diff_formation_enthalpy': np.array([4, 2, -4, -2, 0]),  # (kJ/mol)^2 -> [m^4 * kg^2 / s^4 / mol^2]
-    'mixing_entropy': np.array([0, 0, -2, 0, 1]),  # kJ/mol-K -> [kg * m^2 / s^2 / mol / K]
+    'heating_rate': np.array([0, 0, -1, 0, 0, 0, 1]),  # K/s -> [length, mass, time, ...]
+    'formation_enthalpy': np.array([2, 1, -2, 0, -1, 0, 0]),  # kJ/mol -> [m^2 * kg / s^2 / mol]
+    'diff_formation_enthalpy': np.array([4, 2, -4, 0, -2, 0, 0]),  # (kJ/mol)^2 -> [m^4 * kg^2 / s^4 / mol^2]
+    'mixing_entropy': np.array([0, 0, -2, 0, 0, 0, 1]),  # kJ/mol-K -> [kg * m^2 / s^2 / mol / K]
     'atomic_size_mismatch': np.zeros(7),  # Unitless
-    'atomic_weight_diff': np.array([0, 2, 0, 0, 0]),  # (g/mol)^2 -> [kg^2 / mol^2]
+    'atomic_weight_diff': np.array([0, 2, 0, 0, 0, 0, 0]),  # (g/mol)^2 -> [kg^2 / mol^2]
     'coordination_number': np.zeros(7),  # Unitless
     'itinerant_electrons': np.zeros(7),  # Unitless
     'electronegativity': np.zeros(7),  # Unitless
-    'electron_affinity': np.array([2, 1, -2, 0, 0]),  # kJ/mol -> [m^2 * kg / s^2 / mol]
-    'melting_temperature': np.array([0, 0, 0, 0, 1]),  # K
-    'packing_efficiency': np.zeros(7),  # Unitless 
-    'crystallization_onset_temp': np.array([0, 0, 0, 0, 1])  # K -> target variable
+    'electron_affinity': np.array([2, 1, -2, 0, 0, 0, 0]),  # kJ/mol -> [m^2 * kg / s^2 / mol]
+    'melting_temperature': np.array([0, 0, 0, 0, 0, 0, 1]),  # K
+    'crystallization_onset_temp': np.array([0, 0, 0, 0, 0, 0, 1])  # K -> target variable
 }
 
 # Check dimensional consistency of a formula
 def is_dimensionally_consistent(formula_units, target_units):
     return np.array_equal(formula_units, target_units)
 
-# Example usage of this function during the validation step
 def dimensional_consistency_validation(features, operations, units_dict):
     result_units = np.zeros(7)  # Initialize the result unit vector
     
@@ -60,25 +59,30 @@ def dimensional_consistency_validation(features, operations, units_dict):
 # Define custom function to include R explicitly
 def include_R_in_expressions(x):
     return R * x
-
-# Add the function to the symbolic regression function set
 include_R = make_function(function=include_R_in_expressions, name="include_R", arity=1)
 
 # Define custom division function with protection against division by zero
 def protected_div(x1, x2):
     with np.errstate(divide='ignore', invalid='ignore'):
         return np.where(np.abs(x2) > 0.001, np.divide(x1, x2), 1.0)
-
 protected_div = make_function(function=protected_div, name="protected_div", arity=2)
 
-# Define custom exponential function
-def exp_func(x):
-    return np.exp(np.clip(x, -100, 100))  # Clipping to avoid overflow
+# Define an exponential function that handles large values
+def protected_exp(x):
+    with np.errstate(over='ignore'):
+        return np.where(np.abs(x) < 100, np.exp(x), 0.0)
+exp_function = make_function(function=protected_exp, name='exp', arity=1)
 
-exp_function = make_function(function=exp_func, name="exp", arity=1)
+
+# Custom function to create Arrhenius-type expressions
+def arrhenius_form(x1, x2):
+    # The form is exp(-x1 / (R * x2)) where x1 is akin to activation energy and x2 is temperature
+    return np.exp(-x1 / (R * np.clip(x2, 1e-10, None)))  # Clip to avoid division by zero
+arrhenius_function = make_function(function=arrhenius_form, name='arrhenius', arity=2)
+
 
 # Split the data into training and testing sets
-X = data.drop(columns=['crystallization_onset_temp']) 
+X = data.drop(columns=['crystallization_onset_temp'])  # 'Tl' should be the name of your target variable column
 y = data['crystallization_onset_temp']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -95,57 +99,77 @@ sr = SymbolicRegressor(
     verbose=1,
     parsimony_coefficient=0.1,
     random_state=42,
-    function_set=('add', 'sub', 'mul', protected_div, 'sqrt', 'log', 'sin', 'cos', 'tan', exp_function, include_R),
+    function_set=('add', 'sub', 'mul', protected_div, 'sqrt', 'log', exp_function, include_R, 'arrhenius'),
     const_range=(-5.0, 5.0),
     n_jobs=-1
 )
 
-# GridSearchCV for hyperparameter optimization for typical SR
-param_grid = {
-    'population_size': [500, 1000],
-    'generations': [100, 200, 250],
-    'p_crossover': [0.6, 0.7],
-    'p_subtree_mutation': [0.1, 0.15],
-    'p_hoist_mutation': [0.05],
-    'p_point_mutation': [0.1]
+param_space = {
+    'population_size': (500, 2000),
+    'generations': (100, 500),
+    'p_crossover': (0.5, 0.9, 'uniform'),
+    'p_subtree_mutation': (0.05, 0.2, 'uniform'),
+    'p_hoist_mutation': (0.01, 0.1, 'uniform'),
+    'p_point_mutation': (0.05, 0.2, 'uniform')
 }
 
-grid_search_sr = GridSearchCV(estimator=sr, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2)
-grid_search_sr.fit(X_train, y_train)
+# Perform Bayesian optimization
+bayes_search = BayesSearchCV(
+    estimator=sr_dc,
+    search_spaces=param_space,
+    n_iter=1000,  
+    cv=5,  
+    n_jobs=-1,
+    verbose=2
+)
 
-# Best estimator after GridSearchCV for typical SR
-best_sr = grid_search_sr.best_estimator_
+# Fit the Bayesian optimization on training data
+bayes_search.fit(X_train, y_train)
 
-# Predict and calculate R2 score for typical SR model
-y_pred_sr = best_sr.predict(X_test)
-print(f'R2 Score (Typical SR): {r2_score(y_test, y_pred_sr)}')
+# Best estimator and prediction
+best_sr = bayes_search.best_estimator_
+y_pred_sr = best_sr_dc.predict(X_test)
 
+# Calculate the R2 score
+r2_sr = r2_score(y_test, y_pred_sr)
+print(f"Best R2 Score (Typical SR after Bayesian Optimization): {r2_sr}")
 
-# Define a safe exponential function that handles large values
-def protected_exp(x):
-    with np.errstate(over='ignore'):
-        return np.where(np.abs(x) < 100, np.exp(x), 0.0)
-
-# Create the custom function
-exp_function = make_function(function=protected_exp, name='exp', arity=1)
-
-# Custom Symbolic Regressor with Dimensional Check
+# Custom Symbolic Regressor with Dimensional Check and Memory for Best Accuracy
 class SymbolicRegressorWithDimensionalCheck(SymbolicRegressor):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.best_r2_score = -np.inf  # Initial best score set to negative infinity
+        self.stop_storing = False     # Flag to stop storing inferior models
+    
     def _validate(self, programs, X, y, sample_weight, random_state):
         valid_programs = []
         for program in programs:
-            # Extract the features and operations used in the program
             features = [str(symbol) for symbol in program.program if str(symbol) in units_dict]
             operations = [str(symbol) for symbol in program.program if str(symbol) in ['add', 'sub', 'mul', 'div']]
-            
-            # Perform the dimensional consistency check
             if dimensional_consistency_validation(features, operations, units_dict):
                 valid_programs.append(program)
-        
-        # Proceed with the validation using only dimensionally consistent programs
         return super()._validate(valid_programs, X, y, sample_weight, random_state)
 
-# Train the Symbolic Regressor with Dimensional Consistency (SR-DC)
+    def fit(self, X, y, sample_weight=None):
+        super().fit(X, y, sample_weight)
+        self._remember_best_accuracy(X, y)
+
+    def _remember_best_accuracy(self, X, y):
+        if self.stop_storing:
+            return  # Stop further calculations if storing has stopped
+
+        y_pred = self.predict(X)
+        current_r2_score = r2_score(y, y_pred)
+        
+        # Check if the new R2 score is an improvement
+        if current_r2_score > self.best_r2_score:
+            self.best_r2_score = current_r2_score  # Update the best score
+            print(f"Improved R2 Score: {self.best_r2_score}")
+        else:
+            print(f"Current R2 Score ({current_r2_score}) is not better than Best R2 Score ({self.best_r2_score})")
+            self.stop_storing = True  # Stop further storage if no improvement
+
+# Train the Symbolic Regressor with Dimensions Embedding
 sr_dc = SymbolicRegressorWithDimensionalCheck(
     population_size=1000,
     generations=200,
@@ -158,24 +182,35 @@ sr_dc = SymbolicRegressorWithDimensionalCheck(
     verbose=1,
     parsimony_coefficient=0.1,
     random_state=42,
-    function_set=('add', 'sub', 'mul', protected_div, 'sqrt', 'log', 'sin', 'cos', exp_function, include_R),
+    function_set=('add', 'sub', 'mul', protected_div, 'sqrt', 'log', exp_function, include_R, 'arrhenius'),
     const_range=(-5.0, 5.0),
     n_jobs=-1
 )
 
-grid_search_dc = GridSearchCV(estimator=sr_dc, param_grid=param_grid, cv=5, n_jobs=-1, verbose=1)
-grid_search_dc.fit(X_train, y_train)
+# Perform Bayesian optimization
+bayes_search = BayesSearchCV(
+    estimator=sr_dc,
+    search_spaces=param_space,
+    n_iter=32,  # Number of iterations
+    cv=5,  # 5-fold cross-validation
+    n_jobs=-1,
+    verbose=2
+)
 
-# Best estimator after GridSearchCV with dimensional consistency (SR-DC)
-best_sr_dc = grid_search_dc.best_estimator_
+# Fit the Bayesian optimization on training data
+bayes_search.fit(X_train, y_train)
 
-# Predict and calculate R2 score for SR-DC model
+# Best estimator and prediction
+best_sr_dc = bayes_search.best_estimator_
 y_pred_dc = best_sr_dc.predict(X_test)
-print(f'R2 Score (SR-DC): {r2_score(y_test, y_pred_dc)}')
+
+# Calculate the R2 score
+r2_dc = r2_score(y_test, y_pred_dc)
+print(f"Best R2 Score (SR-DC after Bayesian Optimization): {r2_dc}")
 
 # Get the best expression for Tx from both models
-best_formula_sr = best_sr._program  
-best_formula_dc = best_sr_dc._program 
+best_formula_sr = best_sr._program  # Typical SR model
+best_formula_dc = best_sr_dc._program  # SR-DC model
 print(f'Best Formula for crystallization_onset_temp (Typical SR): {best_formula_sr}')
 print(f'Best Formula for crystallization_onset_temp (SR-DC): {best_formula_dc}')
 
@@ -211,12 +246,26 @@ plt.title('Distribution of Prediction Errors')
 plt.legend()
 plt.show()
 
-# Generations and R2 score tracking
+# Creating a DataFrame to store the data
+df_export = pd.DataFrame({
+    'Actual_crystallization_onset_temp': y_test,
+    'Predicted_crystallization_onset_temp_SR': y_pred_sr,
+    'Predicted_crystallization_onset_temp_DC': y_pred_dc
+})
+
+# Exporting the DataFrame to an Excel file
+file_path = 'predicted_vs_actual_crystallization_onset_temp.xlsx'
+df_export.to_excel(file_path, index=False)
+
+print(f'Data has been exported to {file_path}')
+
+# Ensure only improved models are stored and plotted
 generations = [10, 20, 30, 50, 70, 100, 120, 150, 180, 200]
 r2_scores_sr = []
 r2_scores_dc = []
 complexity_sr = []
 complexity_dc = []
+best_r2_dc = -np.inf 
 
 # Function to count the number of terms (operators and operands) in the formula
 def count_terms(program):
@@ -228,8 +277,12 @@ def count_terms(program):
     return len(terms)
 
 # Loop over different generations and retrain the models
+# Loop over different generations and retrain the models
 for gen in generations:
-    # Train Typical SR model
+    if sr_dc.stop_storing:  # Stop further training if storing has stopped
+        break
+        
+    # Train Typical SR model with best hyperparmaters
     sr_temp = SymbolicRegressor(
         population_size=1000,
         generations=gen,
@@ -253,7 +306,7 @@ for gen in generations:
     # Calculate and append the number of terms (complexity) of the formula
     complexity_sr.append(count_terms(sr_temp._program))
     
-    # Train SR-DC model
+    # Train SR-DC model with best hyperparmaters
     sr_dc_temp = SymbolicRegressorWithDimensionalCheck(
         population_size=1000,
         generations=gen,
@@ -274,8 +327,17 @@ for gen in generations:
     y_pred_dc_temp = sr_dc_temp.predict(X_test)
     r2_scores_dc.append(r2_score(y_test, y_pred_dc_temp))
     
-    # Calculate and append the number of terms (complexity) of the formula
-    complexity_dc.append(count_terms(sr_dc_temp._program))
+  # Check if the R2 score improves
+    current_r2_dc = r2_score(y_test, y_pred_dc_temp)
+    if current_r2_dc > best_r2_dc:
+        best_r2_dc = current_r2_dc  # Update best score
+        
+        # Store improved R2 score and complexity
+        r2_scores_dc.append(current_r2_dc)
+        complexity_dc.append(count_terms(sr_dc_temp._program))
+    else:
+        print(f"No improvement at generation {gen}. Stopping further complexity increase.")
+        break  # Stop the loop if no improvement
 
 # Ensure lengths are consistent
 min_len = min(len(generations), len(r2_scores_sr), len(r2_scores_dc))
@@ -285,7 +347,7 @@ generations = generations[:min_len]
 r2_scores_sr = r2_scores_sr[:min_len]
 r2_scores_dc = r2_scores_dc[:min_len]
 
-# Plot R2 score vs. generations for both models
+# Visualization 4: Plot R2 score vs. generations for both models
 plt.figure(figsize=(10, 5))
 plt.plot(generations, r2_scores_sr, label='Typical SR', marker='o', color='blue')
 plt.plot(generations, r2_scores_dc, label='SR-DC', marker='o', color='red')
@@ -305,7 +367,7 @@ r2_scores_sr = r2_scores_sr[:min_len_sr]
 complexity_dc = complexity_dc[:min_len_dc]
 r2_scores_dc = r2_scores_dc[:min_len_dc]
 
-# Plot R2 score vs. model complexity for both models
+# Visualization 5: Plot R2 score vs. model complexity for both models
 plt.figure(figsize=(10, 5))
 plt.plot(complexity_sr, r2_scores_sr, label='Typical SR', marker='o', color='blue')
 plt.plot(complexity_dc, r2_scores_dc, label='SR-DC', marker='o', color='red')
