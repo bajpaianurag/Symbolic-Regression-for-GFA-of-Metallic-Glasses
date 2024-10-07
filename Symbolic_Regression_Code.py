@@ -5,6 +5,7 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from gplearn.genetic import SymbolicRegressor
 from gplearn.functions import make_function
 from gplearn.fitness import make_fitness
+from skopt import BayesSearchCV
 import matplotlib.pyplot as plt
 import seaborn as sns
 
