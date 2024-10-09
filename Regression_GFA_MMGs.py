@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 # Import necessary libraries
 import pandas as pd
 import numpy as np
@@ -25,10 +19,6 @@ import shap
 import warnings
 warnings.filterwarnings("ignore", message="The objective has been evaluated at this point before.")
 
-
-# In[2]:
-
-
 # Load dataset
 data = pd.read_csv('Regression_Dataset_for_coding.csv')
 X = data.drop(['Tg', 'Tx', 'Tl'], axis=1).values
@@ -38,18 +28,6 @@ y3 = data['Tl'].values
 
 # Split dataset into train and test sets
 X_train, X_test, y1_train, y1_test, y2_train, y2_test, y3_train, y3_test = train_test_split(X, y1, y2, y3, test_size=0.2, random_state=42)
-
-
-# In[ ]:
-
-
-# Load dataset
-data = pd.read_csv('prediction_set_regression.csv')
-X_pred = data.values
-
-
-# In[3]:
-
 
 regressor_models = {
     "RF": (RandomForestRegressor(), {
@@ -89,12 +67,7 @@ regressor_models = {
 }
 
 
-# ## Modelling T_g
-
-# In[4]:
-
-
-# Train and evaluate each model
+## Modelling T_g
 results = {}
 best_models = {}
 
@@ -152,10 +125,7 @@ for name, (model, search_space) in regressor_models.items():
     plt.show()
 
 
-# In[ ]:
-
-
-# Create dictionaries to store SHAP values and plots for each model
+## SHAP Analysis
 shap_values_dict = {}
 explainer_dict = {}
 
@@ -193,40 +163,7 @@ for name, model in best_models.items():
         print(f"SHAP analysis is not applicable for {name} model")
 
 
-# In[5]:
-
-
-# Save datasets and results to Excel
-with pd.ExcelWriter('regression_results_Tg.xlsx') as writer:
-    # Save input and output datasets
-    pd.DataFrame(X_train).to_excel(writer, sheet_name='X_train', index=False)
-    pd.DataFrame(y1_train, columns=['Tg']).to_excel(writer, sheet_name='y1_train', index=False)
-    pd.DataFrame(X_test).to_excel(writer, sheet_name='X_test', index=False)
-    pd.DataFrame(y1_test, columns=['Tg']).to_excel(writer, sheet_name='y1_test', index=False)
-    
-    # Save predictions and metrics
-    for name, result in results.items():
-        df_train_pred = pd.DataFrame(result['y1_train_pred'], columns=['Tg_pred'])
-        df_test_pred = pd.DataFrame(result['y1_test_pred'], columns=['Tg_pred'])
-        df_train_pred.to_excel(writer, sheet_name=f'{name}_train_predictions', index=False)
-        df_test_pred.to_excel(writer, sheet_name=f'{name}_test_predictions', index=False)
-        df_Tg_pred.to_excel(writer, sheet_name=f'{name}_Tg_predictions', index=False)
-
-    metrics_df = pd.DataFrame([
-        {'Model': name, 'MSE': result['mse'], 'R2 Score': result['r2'], 'MAE': result['mae']}
-        for name, result in results.items()
-    ])
-    metrics_df.to_excel(writer, sheet_name='Metrics', index=False)
-
-print("Regression results saved to 'regression_results.xlsx'.")
-
-
-# ## Modelling T_x
-
-# In[6]:
-
-
-# Train and evaluate each model
+## Modelling T_x
 results = {}
 best_models = {}
 
@@ -274,81 +211,7 @@ for name, (model, search_space) in regressor_models.items():
     plt.show()
 
 
-# In[ ]:
-
-
-# Create dictionaries to store SHAP values and plots for each model
-shap_values_dict = {}
-explainer_dict = {}
-
-for name, model in best_models.items():
-    # Use TreeExplainer or KernelExplainer depending on the model
-    if hasattr(model, 'predict'):
-        explainer = shap.Explainer(model, X_train)
-        shap_values = explainer.shap_values(X_test)
-        
-        # Save explainer and SHAP values for later use
-        explainer_dict[name] = explainer
-        shap_values_dict[name] = shap_values
-        
-        # Summary plot (feature importance)
-        plt.figure(figsize=(12, 6))
-        shap.summary_plot(shap_values, X_test, plot_type="bar", show=False)
-        plt.title(f'SHAP Summary Plot for {name}')
-        plt.savefig(f'SHAP_summary_plot_{name}.png')
-        plt.show()
-
-        # Individual feature impact plot
-        plt.figure(figsize=(12, 6))
-        shap.summary_plot(shap_values, X_test, show=False)
-        plt.title(f'SHAP Feature Impact Plot for {name}')
-        plt.savefig(f'SHAP_feature_impact_plot_{name}.png')
-        plt.show()
-        
-        # Force plot for the first prediction
-        shap.force_plot(explainer.expected_value, shap_values[0, :], X_test.iloc[0, :], matplotlib=True, show=False)
-        plt.title(f'SHAP Force Plot for First Prediction - {name}')
-        plt.savefig(f'SHAP_force_plot_{name}_first_pred.png')
-        plt.show()
-
-    else:
-        print(f"SHAP analysis is not applicable for {name} model")
-
-
-# In[7]:
-
-
-# Save datasets and results to Excel
-with pd.ExcelWriter('regression_results_Tx.xlsx') as writer:
-    # Save input and output datasets
-    pd.DataFrame(X_train).to_excel(writer, sheet_name='X_train', index=False)
-    pd.DataFrame(y2_train, columns=['Tx']).to_excel(writer, sheet_name='y2_train', index=False)
-    pd.DataFrame(X_test).to_excel(writer, sheet_name='X_test', index=False)
-    pd.DataFrame(y2_test, columns=['Tx']).to_excel(writer, sheet_name='y2_test', index=False)
-    
-    # Save predictions and metrics
-    for name, result in results.items():
-        df_train_pred = pd.DataFrame(result['y2_train_pred'], columns=['Tx_pred'])
-        df_test_pred = pd.DataFrame(result['y2_test_pred'], columns=['Tx_pred'])
-        df_train_pred.to_excel(writer, sheet_name=f'{name}_train_predictions', index=False)
-        df_test_pred.to_excel(writer, sheet_name=f'{name}_test_predictions', index=False)
-        df_Tx_pred.to_excel(writer, sheet_name=f'{name}_Tx_predictions', index=False)
-        
-    metrics_df = pd.DataFrame([
-        {'Model': name, 'MSE': result['mse'], 'R2 Score': result['r2'], 'MAE': result['mae']}
-        for name, result in results.items()
-    ])
-    metrics_df.to_excel(writer, sheet_name='Metrics', index=False)
-
-print("Regression results saved to 'regression_results.xlsx'.")
-
-
-# ## Modelling T_l
-
-# In[10]:
-
-
-# Train and evaluate each model
+## Modelling T_l
 results = {}
 best_models = {}
 
@@ -394,73 +257,3 @@ for name, (model, search_space) in regressor_models.items():
     plt.title(f'Residuals Plot for {name}')
     plt.savefig(f'{name}_residuals_plot_Tl.png')
     plt.show()
-
-
-# In[ ]:
-
-
-# Create dictionaries to store SHAP values and plots for each model
-shap_values_dict = {}
-explainer_dict = {}
-
-for name, model in best_models.items():
-    # Use TreeExplainer or KernelExplainer depending on the model
-    if hasattr(model, 'predict'):
-        explainer = shap.Explainer(model, X_train)
-        shap_values = explainer.shap_values(X_test)
-        
-        # Save explainer and SHAP values for later use
-        explainer_dict[name] = explainer
-        shap_values_dict[name] = shap_values
-        
-        # Summary plot (feature importance)
-        plt.figure(figsize=(12, 6))
-        shap.summary_plot(shap_values, X_test, plot_type="bar", show=False)
-        plt.title(f'SHAP Summary Plot for {name}')
-        plt.savefig(f'SHAP_summary_plot_{name}.png')
-        plt.show()
-
-        # Individual feature impact plot
-        plt.figure(figsize=(12, 6))
-        shap.summary_plot(shap_values, X_test, show=False)
-        plt.title(f'SHAP Feature Impact Plot for {name}')
-        plt.savefig(f'SHAP_feature_impact_plot_{name}.png')
-        plt.show()
-        
-        # Force plot for the first prediction
-        shap.force_plot(explainer.expected_value, shap_values[0, :], X_test.iloc[0, :], matplotlib=True, show=False)
-        plt.title(f'SHAP Force Plot for First Prediction - {name}')
-        plt.savefig(f'SHAP_force_plot_{name}_first_pred.png')
-        plt.show()
-
-    else:
-        print(f"SHAP analysis is not applicable for {name} model")
-
-
-# In[ ]:
-
-
-# Save datasets and results to Excel
-with pd.ExcelWriter('regression_results_Tl.xlsx') as writer:
-    # Save input and output datasets
-    pd.DataFrame(X_train).to_excel(writer, sheet_name='X_train', index=False)
-    pd.DataFrame(y3_train, columns=['Tl']).to_excel(writer, sheet_name='y3_train', index=False)
-    pd.DataFrame(X_test).to_excel(writer, sheet_name='X_test', index=False)
-    pd.DataFrame(y3_test, columns=['Tl']).to_excel(writer, sheet_name='y3_test', index=False)
-    
-    # Save predictions and metrics
-    for name, result in results.items():
-        df_train_pred = pd.DataFrame(result['y3_train_pred'], columns=['Tl_pred'])
-        df_test_pred = pd.DataFrame(result['y3_test_pred'], columns=['Tl_pred'])
-        df_train_pred.to_excel(writer, sheet_name=f'{name}_train_predictions', index=False)
-        df_test_pred.to_excel(writer, sheet_name=f'{name}_test_predictions', index=False)
-        df_Tl_pred.to_excel(writer, sheet_name=f'{name}_Tl_predictions', index=False)
-
-    metrics_df = pd.DataFrame([
-        {'Model': name, 'MSE': result['mse'], 'R2 Score': result['r2'], 'MAE': result['mae']}
-        for name, result in results.items()
-    ])
-    metrics_df.to_excel(writer, sheet_name='Metrics', index=False)
-
-print("Regression results saved to 'regression_results.xlsx'.")
-
