@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 # Import necessary libraries
 import pandas as pd
 import numpy as np
@@ -63,7 +57,6 @@ classifier_models = {
         'max_features': (0.1, 1.0)
     })
 }
-
 
 results = {}
 best_params = {}
@@ -151,7 +144,6 @@ for name, (model, search_space) in classifier_models.items():
         for j in range(cm_test.shape[1]):
             plt.text(j, i, cm_test[i, j], horizontalalignment="center",
                      color="white" if cm_test[i, j] > thresh else "black")
-    
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
 
