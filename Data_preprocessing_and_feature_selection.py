@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[19]:
-
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,31 +11,16 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.inspection import permutation_importance
-
-
-# In[20]:
-
+from scipy.stats import spearmanr
 
 # Load the dataset
 data = pd.read_csv("data_for_preprocessing.csv")
 
-
-# In[21]:
-
-
 # Check for missing values
 print("Missing values:\n", data.isnull().sum())
 
-
-# In[22]:
-
-
 # Descriptive statistics
 print("Descriptive statistics:\n", data.describe())
-
-
-# In[23]:
-
 
 sns.set_style('white')
 plt.figure(figsize=(12, 12))
@@ -74,15 +53,9 @@ plt.savefig('pairplot_transformed_data.png', dpi=600)
 plt.show()
 
 
-# # Feature Selection
+## Feature Selection
 
-# ### Spearman Rank Correlation
-
-# In[24]:
-
-
-from scipy.stats import spearmanr
-
+### Spearman Rank Correlation
 # Calculate Spearman rank correlation matrix
 corr_matrix_spearman, _ = spearmanr(data)
 
@@ -91,10 +64,6 @@ sns.heatmap(corr_matrix_spearman, annot=False, cmap='rainbow', vmin=-1, vmax=1)
 plt.title("Spearman Rank Correlation Matrix Heatmap")
 plt.show()
 
-
-# In[25]:
-
-
 # Convert the NumPy array to a pandas DataFrame
 corr_matrix_spearman_df = pd.DataFrame(corr_matrix_spearman, columns=data.columns, index=data.columns)
 output_filename = 'Spearman_correlation_matrix.xlsx'
@@ -102,12 +71,7 @@ output_filename = 'Spearman_correlation_matrix.xlsx'
 corr_matrix_spearman_df.to_excel(output_filename, index=False)
 print(f"Spearman correlation matrix saved to {output_filename}")
 
-
-# ### RF based Feature Selection
-
-# In[26]:
-
-
+### RF based Feature Selection
 X = data.drop(['Tg','Tx','Tl'], axis=1).values
 y1 = data['Tg'].values
 y2 = data['Tx'].values
@@ -125,30 +89,7 @@ importances_Tx = model_Tx.feature_importances_
 importances_Tl = model_Tl.feature_importances_
 
 
-# In[27]:
-
-
-importances_Tg
-
-
-# In[28]:
-
-
-importances_Tx
-
-
-# In[29]:
-
-
-importances_Tl
-
-
-# ### Permutation Importance
-
-# In[31]:
-
-
-# Ensure that you provide 11 feature names
+### Permutation Importance
 feature_names = ['Hmix','Smix','delta_r','delta_elec','CN_avg','ebya_avg','EA_avg','Tm_avg','eta','BP']
 
 # Convert X to a DataFrame
@@ -181,12 +122,7 @@ df_importance = df_importance.sort_values(by='Importance', ascending=False)
 print(df_importance)
 
 
-# ## Exhaustive Feature Selection
-
-# In[32]:
-
-
-# Assuming X is a NumPy array
+### Exhaustive Feature Selection
 num_features = X.shape[1]
 all_feature_indices = list(range(num_features))
 
@@ -225,13 +161,6 @@ results_df = pd.DataFrame(results_list)
 # Save the results to an Excel file
 results_df.to_excel("Best_subset_based_feature_selection_results.xlsx", index=False)
 
-# Optionally display the DataFrame
-print(results_df)
-
-
-# In[33]:
-
-
 # Extract the number of features in each subset
 num_features_in_subset = [len(subset.split(",")) for subset in results_df["Feature Subset"]]
 
@@ -246,10 +175,3 @@ plt.xlabel("Number of Features")
 plt.ylabel("Mean Squared Error")
 plt.grid(True)
 plt.show()
-
-
-# In[ ]:
-
-
-
-
