@@ -126,6 +126,7 @@ for name, (model, search_space) in regressor_models.items():
 
 
 ## SHAP Analysis
+sns.set(style="whitegrid")
 shap_values_dict = {}
 explainer_dict = {}
 
@@ -139,29 +140,32 @@ for name, model in best_models.items():
         explainer_dict[name] = explainer
         shap_values_dict[name] = shap_values
         
-        # Summary plot (feature importance)
-        plt.figure(figsize=(12, 6))
+        # Enhanced SHAP Summary plot (feature importance)
+        plt.figure(figsize=(14, 8))
         shap.summary_plot(shap_values, X_test, plot_type="bar", show=False)
-        plt.title(f'SHAP Summary Plot for {name}')
-        plt.savefig(f'SHAP_summary_plot_{name}.png')
+        plt.title(f'SHAP Summary Plot for {name}', fontsize=20, fontweight='bold')
+        plt.xlabel("Mean |SHAP Value| (Feature Importance)", fontsize=16)
+        plt.ylabel("Features", fontsize=16)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.tight_layout()
+        plt.savefig(f'SHAP_summary_plot_{name}.jpg', format='jpg', dpi=600)
         plt.show()
 
-        # Individual feature impact plot
-        plt.figure(figsize=(12, 6))
+        # Enhanced Individual feature impact plot
+        plt.figure(figsize=(14, 8))
         shap.summary_plot(shap_values, X_test, show=False)
-        plt.title(f'SHAP Feature Impact Plot for {name}')
-        plt.savefig(f'SHAP_feature_impact_plot_{name}.png')
+        plt.title(f'SHAP Feature Impact Plot for {name}', fontsize=20, fontweight='bold')
+        plt.xlabel("SHAP Value (Feature Impact)", fontsize=16)
+        plt.ylabel("Features", fontsize=16)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.tight_layout()
+        plt.savefig(f'SHAP_feature_impact_plot_{name}.jpg', format='jpg', dpi=600)
         plt.show()
         
-        # Force plot for the first prediction
-        shap.force_plot(explainer.expected_value, shap_values[0, :], X_test.iloc[0, :], matplotlib=True, show=False)
-        plt.title(f'SHAP Force Plot for First Prediction - {name}')
-        plt.savefig(f'SHAP_force_plot_{name}_first_pred.png')
-        plt.show()
-
     else:
         print(f"SHAP analysis is not applicable for {name} model")
-
 
 ## Modelling T_x
 results = {}
