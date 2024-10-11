@@ -7,6 +7,6 @@ Regression_GFA_Metallic_Glasses.py contains Python code for performing regressio
 
 Symbolic_Regression_Code.py contains Python code for dimensions embedded symbolic regression using genetic programming to model the glass-forming ability (GFA) or related properties. Additionally, model complexity is analyzed and optimized in competition with model accuracy.
 
-Generate_new_MG_compostions_GAN_VAE.py contains Python code for generating new MMG compositions using a Variational Autoencoders (VAE). The code defines methods for constructing the generator, discriminator, and encoder models for the GAN-VAE framework. These models work to generate and refine new compositions based on latent space representations.
+Generate_new_MG_compostions_GAN.py contains Python code for generating new MMG compositions using a Generative Adversarial Network (GAN). The code defines methods for constructing the generator and discriminator hybrid model for the GAN framework. These models work to generate and refine new compositions based on latent space representations.
 
 Classifier_check_for_generated_compositions.py contains Python code for building and evaluating classification models for multicomponent alloy compositions. Several classifiers are defined, including Random Forest, Gradient Boosting, SVM, Logistic Regression, K-Nearest Neighbors, Naive Bayes, and a Neural Network model built built to classify multicomponent metallic glasses from crystalline alloys.
