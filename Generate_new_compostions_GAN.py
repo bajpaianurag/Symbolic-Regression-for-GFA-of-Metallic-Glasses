@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import numpy as np
 import pandas as pd
 from tensorflow.keras.layers import Input, Dense, LeakyReLU, BatchNormalization
@@ -13,18 +7,10 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import ParameterGrid
 import matplotlib.pyplot as plt
 
-
-# In[2]:
-
-
 # Load data
 data = pd.read_csv('MG_data_for_GAN.csv')
 compositions = data.iloc[:, :48].values  
 features = data.iloc[:, 48:].values
-
-
-# In[3]:
-
 
 # Normalize data
 scaler_compositions = MinMaxScaler()
@@ -32,10 +18,6 @@ compositions_normalized = scaler_compositions.fit_transform(compositions)
 scaler_features = MinMaxScaler()
 features_normalized = scaler_features.fit_transform(features)
 input_data = np.hstack([compositions_normalized, features_normalized])
-
-
-# In[4]:
-
 
 # Define the generator and discriminator models
 def build_generator(latent_dim, output_dim, layers, units):
@@ -67,10 +49,6 @@ def build_gan(generator, discriminator, lr):
     combined.compile(loss='binary_crossentropy', optimizer=Adam(lr))
     return combined
 
-
-# In[5]:
-
-
 # Define the hyperparameter grid for hyperparameter optimization (latent_dim fixed at 2)
 param_grid = {
     'lr': [0.0001, 0.0002, 0.0005],
@@ -81,10 +59,6 @@ param_grid = {
     'discriminator_units': [32, 64, 128],
     'epochs': [1000] 
 }
-
-
-# In[6]:
-
 
 # Initialize grid search
 best_model = None
@@ -146,10 +120,6 @@ for params in ParameterGrid(param_grid):
 # Output the best parameters
 print(f"Best parameters found: {best_params}")
 
-
-# In[7]:
-
-
 # Given that the best_model has been identified as the best combination of (generator, discriminator, gan)
 best_generator = best_model[0]
 
@@ -161,10 +131,6 @@ plt.xlabel('Number of Epochs')
 plt.ylabel('Loss')
 plt.legend()
 plt.show()
-
-
-# In[8]:
-
 
 # Project known compositions into the latent space using the generator
 latent_vectors = np.random.normal(0, 1, (input_data.shape[0], latent_dim))
@@ -184,11 +150,7 @@ plt.show()
 new_compositions_df = pd.DataFrame(new_compositions, columns=[f'Element {i+1}' for i in range(new_compositions.shape[1])])
 new_compositions_df.to_excel('generated_compositions.xlsx', index=False)
 
-
-# In[9]:
-
-
-# Classify alloys based on major elements exceeding a threshold (similar to earlier)
+# Classify alloys based on major elements exceeding a threshold
 major_element_threshold = 0.2
 
 def classify_alloys(compositions, threshold=major_element_threshold):
@@ -204,7 +166,7 @@ alloy_classes = classify_alloys(new_compositions)
 unique_classes = list(set(alloy_classes))
 color_map = plt.get_cmap('tab10')
 colors = {cls: color_map(i % 10) for i, cls in enumerate(unique_classes)}
-markers = ['o', '^', 'v', '<', '>', 's', '*', 'h', 'X']
+markers = ['o', '^', 'v', '<', '>', 's', '*', 'h', 'X', 'D', 'P', '|', '_', '+']
 markers_map = {cls: markers[i % len(markers)] for i, cls in enumerate(unique_classes)}
 
 # Plot latent space colored by alloy class
@@ -216,4 +178,3 @@ plt.xlabel('Latent Dimension 1')
 plt.ylabel('Latent Dimension 2')
 plt.title('Latent Space of Generated Compositions')
 plt.show()
-
