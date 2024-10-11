@@ -1,7 +1,7 @@
 
 Data_preprocessing_and_feature_selction.py contains Python code for preprocessing data and performing feature selection for regression model
 
-Clustering_Feature_Generation.py contains Python code for Unsupervised representaion of the MMG dataset to obtain cluster information to be used as additional feature for regression models.
+Clustering_Feature_Generation.py contains Python code for Unsupervised representaion of the MMG dataset to obtain cluster information and then further in-depth analysis of MMG compositions based on unsupervised clustering to be used as additional features for symbolic regression (DESyR) model.
 
 Regression_GFA_Metallic_Glasses.py contains Python code for performing regression analysis on glass-forming ability (GFA) of multicomponent metallic glasses. Multiple regression models, including Random Forest, Gradient Boosting, SVM, Lasso, Ridge, ElasticNet, K-Nearest Neighbors, and neural networks, are applied to predict the target values (Tg, Tx, and Tl).
 
