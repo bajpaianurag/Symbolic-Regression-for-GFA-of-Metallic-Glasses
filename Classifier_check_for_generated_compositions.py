@@ -58,6 +58,7 @@ classifier_models = {
     })
 }
 
+# Train models using Bayesian Hyperparmeter optimization
 results = {}
 best_params = {}
 
@@ -150,4 +151,3 @@ for name, (model, search_space) in classifier_models.items():
     plt.tight_layout()
     plt.savefig(f'{name}_curves_cm.png')
     plt.show()
-
