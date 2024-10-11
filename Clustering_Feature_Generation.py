@@ -12,9 +12,9 @@ from sklearn.manifold import TSNE
 from sklearn.cluster import AgglomerativeClustering
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from sklearn.neighbors import KernelDensity
+from sklearn.metrics import silhouette_samples, silhouette_score
 from scipy.spatial.distance import cdist
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import silhouette_samples, silhouette_score
 import shap
 
 # Load the dataset
