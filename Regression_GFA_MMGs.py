@@ -140,7 +140,7 @@ for name, model in best_models.items():
         explainer_dict[name] = explainer
         shap_values_dict[name] = shap_values
         
-        # Enhanced SHAP Summary plot (feature importance)
+        # SHAP Summary plot (feature importance)
         plt.figure(figsize=(14, 8))
         shap.summary_plot(shap_values, X_test, plot_type="bar", show=False)
         plt.title(f'SHAP Summary Plot for {name}', fontsize=20, fontweight='bold')
@@ -152,7 +152,7 @@ for name, model in best_models.items():
         plt.savefig(f'SHAP_summary_plot_{name}.jpg', format='jpg', dpi=600)
         plt.show()
 
-        # Enhanced Individual feature impact plot
+        # Individual feature impact plot
         plt.figure(figsize=(14, 8))
         shap.summary_plot(shap_values, X_test, show=False)
         plt.title(f'SHAP Feature Impact Plot for {name}', fontsize=20, fontweight='bold')
@@ -166,6 +166,7 @@ for name, model in best_models.items():
         
     else:
         print(f"SHAP analysis is not applicable for {name} model")
+
 
 ## Modelling T_x
 results = {}
