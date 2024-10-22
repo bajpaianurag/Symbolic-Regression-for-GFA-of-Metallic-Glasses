@@ -5,7 +5,7 @@ Clustering_Feature_Generation.py contains Python code for Unsupervised represent
 
 Regression_GFA_Metallic_Glasses.py contains Python code for performing regression analysis on glass-forming ability (GFA) of multicomponent metallic glasses. Multiple regression models, including Random Forest, Gradient Boosting, SVM, Lasso, Ridge, ElasticNet, K-Nearest Neighbors, and neural networks, are applied to predict the target values (Tg, Tx, and Tl).
 
-Symbolic_Regression_Code.py contains Python code for dimensions embedded symbolic regression using genetic programming to model the glass-forming ability (GFA) or related properties. Additionally, model complexity is analyzed and optimized in competition with model accuracy.
+Dimensions_embedded_Symbolic_Regression.py contains Python code for dimensions embedded symbolic regression using genetic programming to model the glass-forming ability (GFA) or related properties. Additionally, model complexity is analyzed and optimized in competition with model accuracy.
 
 Generate_new_compostions_GAN.py contains Python code for generating new MMG compositions using a Generative Adversarial Network (GAN). The code defines methods for constructing the generator and discriminator hybrid model for the GAN framework. These models work to generate and refine new compositions based on latent space representations.
 
