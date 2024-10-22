@@ -15,7 +15,7 @@ import os
 df = pd.read_csv('regression_data_clusterwise.csv')
 
 # Split the data into features and target (transformation temperatures)
-X = df.drop(['Cluster_Label', 'Tg', 'Tx', 'Tl'], axis=1)  # Features (composition, atomic features, etc.)
+X = df.drop(['Cluster_Label', 'Tg', 'Tx', 'Tl'], axis=1)
 y_Tg = df['Tg']  
 y_Tx = df['Tx']  
 y_Tl = df['Tl']  
@@ -63,7 +63,7 @@ def gb_optimizer(X_train, y_train, init_points=25, n_iter=500):
 
     # Bounds for Bayesian optimization
     params = {
-        'n_estimators': (10, 200),
+        'n_estimators': (10, 300),
         'learning_rate': (0.00001, 1.0),
         'max_depth': (1, 30),
         'min_samples_split': (2, 30),
@@ -115,9 +115,7 @@ for cluster, data in clustered_data.items():
 def plot_composite_parity(clustered_data, optimized_models_Tg, optimized_models_Tx, optimized_models_Tl):
     fig, axes = plt.subplots(len(clustered_data), 3, figsize=(18, len(clustered_data) * 5))
     
-    # Iterate through clusters
     for i, cluster in enumerate(clustered_data.keys()):
-        # Access train/test data for the current cluster
         data = clustered_data[cluster]
         X_train = data['X_train']
         X_test = data['X_test']
@@ -167,9 +165,7 @@ def plot_composite_parity(clustered_data, optimized_models_Tg, optimized_models_
 def plot_composite_residuals(clustered_data, optimized_models_Tg, optimized_models_Tx, optimized_models_Tl):
     fig, axes = plt.subplots(len(clustered_data), 3, figsize=(18, len(clustered_data) * 5))
 
-    # Iterate through clusters
     for i, cluster in enumerate(clustered_data.keys()):
-        # Access train/test data for the current cluster
         data = clustered_data[cluster]
         X_train = data['X_train']
         X_test = data['X_test']
@@ -225,16 +221,12 @@ plot_composite_residuals(clustered_data, optimized_models_Tg, optimized_models_T
 
 
 # SHAP Analysis for each cluster and each temperature
-
-# Function to apply the colormap and get the corresponding colors for each feature
 def apply_colormap(shap_values, colormap):
-    # Normalize SHAP values for the color mapping
     norm = plt.Normalize(vmin=np.min(shap_values), vmax=np.max(shap_values))
     return cm.get_cmap(colormap)(norm(shap_values))
 
 # Summary plot function with SHAP value annotations and enhanced styling
 def shap_summary_plot(ax, shap_values, X_train, feature_names, title, colormap):
-    # Calculate the mean absolute SHAP values
     mean_shap_values = np.abs(shap_values.values).mean(axis=0)
 
     colors = apply_colormap(mean_shap_values, colormap)
@@ -249,11 +241,10 @@ def shap_summary_plot(ax, shap_values, X_train, feature_names, title, colormap):
     for i, v in enumerate(mean_shap_values):
         ax.text(v + 0.02, i, f'+{v:.2f}', color='black', va='center', fontsize=10, fontweight='bold')
     ax.grid(True, which='major', axis='x', linestyle='--', linewidth=0.5, alpha=0.5)
-    for spine in ax.spines.values():  # Loop through each spine (border)
-        spine.set_edgecolor('black')  # Set border color to black
-        spine.set_linewidth(2)        # Set the thickness of the border
+    for spine in ax.spines.values(): 
+        spine.set_edgecolor('black')
+        spine.set_linewidth(2)        
 
-# Dictionary to store SHAP values for each cluster and each temperature
 shap_values_Tg = {}
 shap_values_Tx = {}
 shap_values_Tl = {}
@@ -281,36 +272,36 @@ temperatures = ['Tg', 'Tx', 'Tl']
 # Create a figure with subplots (3 rows for temperatures, columns for clusters)
 fig, axes = plt.subplots(3, num_clusters, figsize=(2.5 * num_clusters, 9), sharey=True)
 
-# Enhanced Summary Plots for SHAP values (Tg, Tx, Tl) with SHAP value annotations in a grid
+# Summary Plots for SHAP values (Tg, Tx, Tl) with SHAP value annotations in a grid
 for col, cluster in enumerate(clustered_data.keys()):
     # SHAP summary plot for Tg
     shap_summary_plot(
-        axes[0, col],  # First row for Tg
+        axes[0, col],  
         shap_values_Tg[cluster], 
         clustered_data[cluster]['X_train'], 
         X.columns, 
         title=f'SHAP Summary Plot for Tg - Cluster {cluster}', 
-        colormap="summer"  # Change color map for Tg plots
+        colormap="summer" 
     )
 
     # SHAP summary plot for Tx
     shap_summary_plot(
-        axes[1, col],  # Second row for Tx
+        axes[1, col],  
         shap_values_Tx[cluster], 
         clustered_data[cluster]['X_train'], 
         X.columns, 
         title=f'SHAP Summary Plot for Tx - Cluster {cluster}', 
-        colormap="autumn"  # Change color map for Tx plots
+        colormap="autumn" 
     )
 
     # SHAP summary plot for Tl
     shap_summary_plot(
-        axes[2, col],  # Third row for Tl
+        axes[2, col], 
         shap_values_Tl[cluster], 
         clustered_data[cluster]['X_train'], 
         X.columns, 
         title=f'SHAP Summary Plot for Tl - Cluster {cluster}', 
-        colormap="winter"  # Change color map for Tl plots
+        colormap="winter"
     )
 
 plt.tight_layout()
@@ -321,8 +312,6 @@ plt.show()
 # SHAP dependence plots
 def shap_dependence_plot_with_custom_font(shap_values, X_train, target_values, feature_name, target_name, cluster, cmap='seismic', font_size=14, font_weight='bold'):
     plt.figure(figsize=(4, 6))
-    
-    # SHAP dependence plot
     shap.dependence_plot(
         feature_name, 
         shap_values, 
@@ -360,13 +349,13 @@ for cluster, data in clustered_data.items():
         shap_dependence_plot_with_custom_font(
             shap_values_Tg[cluster].values, 
             X_train, 
-            data['y_train_Tg'],  # Use Tg as the color map
+            data['y_train_Tg'],
             feature, 
             'Tg', 
             cluster,
-            cmap='seismic',  # You can customize the color map here
-            font_size=16,    # Customize font size
-            font_weight='bold'  # Customize font weight
+            cmap='seismic', 
+            font_size=16, 
+            font_weight='bold' 
         )
     
     # SHAP for Tx
@@ -374,13 +363,13 @@ for cluster, data in clustered_data.items():
         shap_dependence_plot_with_custom_font(
             shap_values_Tx[cluster].values, 
             X_train, 
-            data['y_train_Tx'],  # Use Tx as the color map
+            data['y_train_Tx'], 
             feature, 
             'Tx', 
             cluster,
-            cmap='PiYG',  # Another color map
-            font_size=16,    # Customize font size
-            font_weight='bold'  # Customize font weight
+            cmap='PiYG',
+            font_size=16,
+            font_weight='bold'
         )
     
     # SHAP for Tl
@@ -388,11 +377,11 @@ for cluster, data in clustered_data.items():
         shap_dependence_plot_with_custom_font(
             shap_values_Tl[cluster].values, 
             X_train, 
-            data['y_train_Tl'],  # Use Tl as the color map
+            data['y_train_Tl'],
             feature, 
             'Tl', 
             cluster,
-            cmap='PuOr',  # Another color map
-            font_size=16,    # Customize font size
-            font_weight='bold'  # Customize font weight
+            cmap='PuOr',
+            font_size=16, 
+            font_weight='bold'
         )
