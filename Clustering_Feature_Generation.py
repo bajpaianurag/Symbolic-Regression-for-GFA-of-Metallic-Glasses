@@ -43,6 +43,12 @@ scaled_features_df = pd.DataFrame(scaled_features, columns=features.columns)
 
 
 # K-Means Cluster Optimization
+wcss = []
+for i in range(1, 15):
+    kmeans = KMeans(n_clusters=i, init='k-means++', max_iter=300, n_init=10, random_state=0)
+    kmeans.fit(data)
+    wcss.append(kmeans.inertia_)
+
 sns.set(style="whitegrid")
 plt.figure(figsize=(12, 10))
 plt.plot(range(1, 10), wcss, marker='o', markersize=18, linestyle='--', linewidth=2, color='blue')
