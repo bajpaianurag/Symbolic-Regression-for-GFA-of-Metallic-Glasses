@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[26]:
-
-
 import os
 import numpy as np
 import pandas as pd
@@ -26,26 +20,15 @@ import optuna.visualization as vis
 import plotly.express as px
 
 
-# In[2]:
-
-
 composition_df = pd.read_csv("input_regression_SR_compositions.csv", index_col=0)
 atomic_properties_df = pd.read_csv("elemental_properties.csv", index_col=0)
 binary_enthalpy_df = pd.read_csv("enthalpy_of_mixing.csv", index_col=0)
 tg_df = pd.read_csv("crystallization_temperature.csv", index_col=0)
 
-
-# In[3]:
-
-
 tg_mean = tg_df.values.mean()
 tg_std = tg_df.values.std()
 print(f"Target Tg Normalization: mean={tg_mean:.4f}, std={tg_std:.4f}")
 tg_df_normalized = (tg_df - tg_mean) / tg_std
-
-
-# In[4]:
-
 
 alloy_properties_df = pd.read_csv("input_regression_SR_alloy_properties.csv", index_col=0)
 
@@ -53,24 +36,11 @@ if "Alloy_ID" in alloy_properties_df.columns:
     alloy_properties_df.set_index("Alloy_ID", inplace=True)
 
 alloy_properties_df.index = alloy_properties_df.index.astype(str)
-
-
-# In[5]:
-
-
 alloy_properties_df["Tm_avg"] = 1 / alloy_properties_df["Tm_avg"]
-
-
-# In[6]:
-
-
 print("\n Alloy Properties:")
 print(alloy_properties_df.head())
 
-
-# In[7]:
-
-
+# Conatruct Initial Graph Representation
 def construct_alloy_graphs(composition_df, atomic_properties_df, binary_enthalpy_df):
     """
     Constructs a graph for each alloy.
@@ -114,10 +84,7 @@ def construct_alloy_graphs(composition_df, atomic_properties_df, binary_enthalpy
 graphs = construct_alloy_graphs(composition_df, atomic_properties_df, binary_enthalpy_df)
 print(f"Constructed {len(graphs)} Alloy Graphs!")
 
-
-# In[8]:
-
-
+# Plot Initial Graph Representation
 def plot_graph_with_weights(G, title="Alloy Graph"):
     fig, ax = plt.subplots(figsize=(7, 6)) 
     pos = nx.spring_layout(G, seed=42, k=0.8)
@@ -145,53 +112,7 @@ def plot_graph_with_weights(G, title="Alloy Graph"):
 first_alloy_id = list(graphs.keys())[0]
 plot_graph_with_weights(graphs[first_alloy_id], title=f"Graph for Alloy {first_alloy_id}")
 
-
-# In[9]:
-
-
-output_dir = "alloy_graphs"
-os.makedirs(output_dir, exist_ok=True)
-
-def plot_and_save_graph(G, alloy_id):
-    fig, ax = plt.subplots(figsize=(7, 6))
-
-    pos = nx.spring_layout(G, seed=42, k=0.8)
-
-    node_colors = np.array([G.nodes[node]["Rm"] for node in G.nodes()])
-    edge_weights = np.array([G[u][v]['weight'] for u, v in G.edges()])
-    node_sizes = 2000 * (node_colors - node_colors.min()) / (node_colors.max() - node_colors.min()) + 1000
-    edge_weights_norm = (edge_weights - edge_weights.min()) / (edge_weights.max() - edge_weights.min())
-
-    nodes = nx.draw_networkx_nodes(
-        G, pos, ax=ax, node_size=node_sizes, cmap=plt.cm.Set2, 
-        node_color=node_colors, alpha=1
-    )
-    
-    edges = nx.draw_networkx_edges(
-        G, pos, ax=ax, edge_color=edge_weights_norm, edge_cmap=plt.cm.coolwarm, 
-        width=2.5, alpha=0.85
-    )
-    
-    nx.draw_networkx_labels(G, pos, ax=ax, font_size=16, font_color="black", font_weight="bold")
-
-    edge_labels = {(u, v): f"{G[u][v]['weight']:.2f}" for u, v in G.edges()}
-    nx.draw_networkx_edge_labels(G, pos, ax=ax, edge_labels=edge_labels, font_size=14, font_color="black")
-
-    plt.title(f"Graph for Alloy {alloy_id}", fontsize=16, fontweight="bold")
-
-    output_path = os.path.join(output_dir, f"alloy_{alloy_id}.jpeg")
-    plt.savefig(output_path, format="jpeg", dpi=300) 
-    plt.close(fig)
-
-for alloy_id in graphs.keys():
-    plot_and_save_graph(graphs[alloy_id], alloy_id)
-
-print(f"Saved {len(graphs)} Alloy Graphs in '{output_dir}/' as .jpeg files!")
-
-
-# In[10]:
-
-
+# Convert Grpahs to PyG format
 def convert_graphs_to_pyg(graphs, tg_df):
     pyg_graphs = []
     for alloy_id, G in graphs.items():
@@ -209,10 +130,7 @@ def convert_graphs_to_pyg(graphs, tg_df):
 pyg_graphs = convert_graphs_to_pyg(graphs, tg_df_normalized)
 print(f"Converted {len(pyg_graphs)} Graphs to PyTorch Geometric Format!")
 
-
-# In[11]:
-
-
+# Train-Test Split Prior to Training
 train_val_graphs, test_graphs = train_test_split(pyg_graphs, test_size=0.15, random_state=42)
 train_graphs, val_graphs = train_test_split(train_val_graphs, test_size=0.1765, random_state=42)
 print("Dataset Split Summary:")
@@ -230,10 +148,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 node_dim = train_graphs[0].x.shape[1]
 edge_dim = train_graphs[0].edge_attr.shape[1]
 
-
-# In[12]:
-
-
+# Initialize the GNN framework
 class TgPredictorGNN_v2(nn.Module):
     def __init__(self, node_dim, edge_dim, hidden_dim=64):
         super(TgPredictorGNN_v2, self).__init__()
@@ -282,10 +197,7 @@ class TgPredictorGNN_v2(nn.Module):
         x = self.fc2(x)
         return x.view(-1)
 
-
-# In[13]:
-
-
+# Hyperparameter Optimizaiton
 def objective(trial):
     hidden_channels = trial.suggest_categorical('hidden_channels', [16, 32, 64, 128, 256])
     lr = trial.suggest_float('lr', 1e-6, 1e-3, log=True)
@@ -346,10 +258,7 @@ final_optimizer = torch.optim.Adam(final_model.parameters(), lr=final_lr, weight
 final_criterion = nn.MSELoss()
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(final_optimizer, mode='min', factor=0.8, patience=200, verbose=True)
 
-
-# In[25]:
-
-
+# Training with the best hyperparameters
 def train_final_model(model, train_loader, val_loader, optimizer, criterion, scheduler, num_epochs=2000, patience=200):
     best_val_loss = float('inf')
     epochs_without_improvement = 0
@@ -414,9 +323,6 @@ final_model, train_losses, val_losses, lrs = train_final_model(final_model, trai
                                                                 num_epochs=2000, patience=200)
 
 
-# In[15]:
-
-
 def evaluate_and_export(model, loader, filename="test_predictions.csv"):
     model.eval()
     preds = []
@@ -435,14 +341,10 @@ def evaluate_and_export(model, loader, filename="test_predictions.csv"):
     mae = mean_absolute_error(trues, preds)
     print(f"Test R2: {r2:.4f}, MSE: {mse:.4f}, MAE: {mae:.4f}")
 
-
-# In[16]:
-
-
+# Plot Loss Curves
 sns.set_theme(style="white", palette="pastel")
 
 plt.figure(figsize=(10, 6))
-
 plt.plot(train_losses, label='Train Loss', linestyle='-', linewidth=2, color='red')
 plt.plot(val_losses, label='Validation Loss', linestyle='-', linewidth=2, color='blue')
 plt.xlabel("Epoch", fontsize=14, fontweight='bold')
@@ -462,10 +364,7 @@ plt.tight_layout()
 plt.savefig("loss_curves_Tg.jpg", format="jpg", dpi=300, bbox_inches="tight")
 plt.show()
 
-
-# In[17]:
-
-
+# Parity Plots
 def predict_and_plot(model, loader, filename="pred_vs_true_Tg.jpg"):
     model.eval()
     preds = []
@@ -507,10 +406,7 @@ def predict_and_plot(model, loader, filename="pred_vs_true_Tg.jpg"):
 
 predict_and_plot(final_model, test_loader)
 
-
-# In[18]:
-
-
+# Plot Optimized Graph Representation
 def plot_graph_with_new_edge_weights(G, model, title="Alloy Graph with New Edge Weights"):
     fig, ax = plt.subplots(figsize=(7, 6))
     pos = nx.spring_layout(G, seed=42, k=0.8)
@@ -558,69 +454,7 @@ first_alloy_id = list(graphs.keys())[0]
 plot_graph_with_new_edge_weights(graphs[first_alloy_id], final_model,
                                  title=f"Graph for Alloy {first_alloy_id} with Learned New Edge Weights")
 
-
-# In[19]:
-
-
-output_dir = "alloy_optimized_graphs_Tg"
-os.makedirs(output_dir, exist_ok=True)
-
-def plot_and_save_graph(G, model, alloy_id):
-    """Plots the alloy graph with new edge weights and saves as a high-quality JPG."""
-    fig, ax = plt.subplots(figsize=(7, 6))
-    pos = nx.spring_layout(G, seed=42, k=0.7) 
-
-    node_colors = np.array([G.nodes[node]["Rm"] for node in G.nodes()])
-    node_range = node_colors.max() - node_colors.min()
-    node_sizes = (2000 * (node_colors - node_colors.min()) / (node_range + 1e-6) + 1200 
-                  if node_range != 0 else np.full_like(node_colors, 2000))
- 
-    new_edge_weights = []
-    for u, v in G.edges():
-        hmix = G[u][v]["hmix"]
-        delta_r = G[u][v]["delta_r"]
-        delta_elec = G[u][v]["delta_elec"]
-        comp = G[u][v]["comp"]
-        features = torch.tensor([hmix, delta_r, delta_elec], dtype=torch.float32)
-        s = torch.matmul(features, final_model.w).item()
-        new_weight = s * comp
-        new_edge_weights.append(new_weight)
-
-    new_edge_weights = np.array(new_edge_weights)
-    edge_range = new_edge_weights.max() - new_edge_weights.min()
-    edge_weights_norm = (new_edge_weights - new_edge_weights.min()) / (edge_range + 1e-6) if edge_range != 0 else np.ones_like(new_edge_weights)
-
-    nx.draw_networkx_nodes(
-        G, pos, ax=ax, node_size=node_sizes, cmap=plt.cm.Set2,
-        node_color=node_colors, edgecolors='none', linewidths=0, alpha=1.0
-    )
-
-    nx.draw_networkx_edges(
-        G, pos, ax=ax, edge_color=edge_weights_norm, edge_cmap=plt.cm.coolwarm,
-        width=2.5, alpha=0.85
-    )
-
-    nx.draw_networkx_labels(G, pos, ax=ax, font_size=16, font_color="black", font_weight="bold")
-
-    edge_labels = {(u, v): f"{w:.2f}" for (u, v), w in zip(G.edges(), new_edge_weights)}
-    nx.draw_networkx_edge_labels(G, pos, ax=ax, edge_labels=edge_labels, font_size=14, font_color="black")
-
-    plt.title(f"Alloy {alloy_id} with Learned Edge Weights", fontsize=16, fontweight="bold", pad=15)
-    plt.tight_layout()
-
-    output_path = os.path.join(output_dir, f"alloy_{alloy_id}.jpg")
-    plt.savefig(output_path, format='jpg', dpi=300, bbox_inches='tight')
-    plt.close(fig)  
-
-for alloy_id in graphs.keys():
-    plot_and_save_graph(graphs[alloy_id], final_model, alloy_id)
-
-print(f"All alloy graphs have been saved in '{output_dir}' directory as JPG files.")
-
-
-# In[20]:
-
-
+# Graph Embeddings Extraction and t-SNE Visualization
 def extract_graph_embeddings(model, loader):
     model.eval()
     embeddings = []
@@ -637,10 +471,6 @@ def extract_graph_embeddings(model, loader):
     embeddings = np.concatenate(embeddings, axis=0)
     targets = np.concatenate(targets, axis=0).flatten()
     return embeddings, targets
-
-
-# In[21]:
-
 
 embeddings, targets = extract_graph_embeddings(final_model, test_loader)
 
@@ -669,10 +499,7 @@ plt.tight_layout()
 plt.savefig("tsne_projection_Tg.jpg", format="jpg", dpi=300, bbox_inches="tight")
 plt.show()
 
-
-# In[22]:
-
-
+# Embeddings Representation using PCA
 sns.set_theme(style="whitegrid", context="talk", font_scale=1.3)
 
 def extract_layer_embeddings(model, data):
@@ -718,10 +545,7 @@ plt.tight_layout(pad=2)
 plt.savefig("pca_embeddings_Tg.jpg", format="jpg", dpi=300, bbox_inches="tight")
 plt.show()
 
-
-# In[23]:
-
-
+# Export GNN features
 def extract_alloy_features(G, pyg_data, model, alloy_id):
     features_dict = {}
     features_dict["alloy_id"] = alloy_id
@@ -806,10 +630,7 @@ features_df = pd.DataFrame(all_features)
 features_df.to_csv("alloy_features_Tg.csv", index=False)
 print("Extracted features for all alloys and saved to 'alloy_features_Tg.csv'.")
 
-
-# In[24]:
-
-
+# Optimization Plots
 optuna_history_fig = vis.plot_optimization_history(study)
 
 def style_common_layout(fig, title):
@@ -859,16 +680,3 @@ for i, trace in enumerate(optuna_history_fig.data):
         )
 
 optuna_history_fig.show()
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
